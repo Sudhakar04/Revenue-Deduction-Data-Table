@@ -1,0 +1,1029 @@
+
+-----------------------------------------------------------------------------------
+HTML
+------------------------------------------------------------------------------------
+
+<template>
+
+<lightning-card title="Revenue Deduction" icon-name="custom:custom26">
+
+    <template if:true={Spinner}>
+        <div class="spinner">
+            <lightning-spinner alternative-text="Loading" size="medium"></lightning-spinner>
+        </div>
+    </template>
+
+    <div class="slds-var-m-left_medium">
+        <p style="color: darkBlue; font-size: 14px; padding: 8px">
+            * Please select filter items in specific order, else selection will be cleared
+        </p>
+    </div>
+
+    <div class="slds-box slds-var-m-around_large slds-grid slds-wrap" style="border: 3px solid #b4b2b2;">
+        <div class="slds-col slds-size_2-of-12">
+            <div>
+                <legend class="slds-form-element__legend slds-form-element__label">Business Division</legend>
+            </div><br>
+    
+            <div class="slds-box slds-box_x-small slds-theme_default slds-container_small slds-var-m-top_small slds-var-m-around_x-small" style="height: 200px;border: 1px solid #b4b2b2;">
+                <div class="slds-scrollable_y">
+                    <div class="slds-scrollable_x">
+                        <div class="slds-form-element__control">
+                            <div class="slds-grid">
+                                <lightning-input data-id="allbox3" class="slds-checkbox slds-size_2-of-3" type="checkbox" value="" onchange={selectAll} label="Select All"></lightning-input>
+                                <a name="clearFilter" data-id="group" class="slds-float_right slds-size_1-of-6 clear-filter" style="text-align: right" onclick={clearFilters}>Clear</a>
+                            </div>
+    
+                            <template for:each={filterOptions.groups} for:item="group">
+                                    
+                                <lightning-input key={group.Id} type="checkbox" data-id="box3" value={group.Id} label={group.Name} name={group.Id} onchange={loadFamilies}></lightning-input>
+
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slds-col slds-size_1-of-12">
+            
+            <div>
+                <legend class="slds-form-element__legend slds-form-element__label">Tiers</legend>
+            </div><br>
+
+            <div class="slds-box slds-box_x-small slds-theme_default slds-container_small slds-var-m-top_small slds-var-m-around_x-small" style="height: 200px;border: 1px solid #b4b2b2;">
+                <div class="slds-form-element__control">
+                    <template for:each={filterOptions.tiers} for:item="tier">
+
+                        <lightning-input key={tier} type="checkbox" name={tier} data-id="box6" value="" label={tier} onchange={loadFamiliesFromTiers}></lightning-input>
+                        
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <div class="slds-col slds-size_3-of-12">
+            <div>
+                <legend class="slds-form-element__legend slds-form-element__label">Product Family</legend>
+            </div><br>
+
+            <div class="slds-box slds-box_x-small slds-theme_default slds-container_small slds-var-m-top_small slds-var-m-around_x-small" style="height: 200px;border: 1px solid #b4b2b2;">
+                
+                <lightning-input style="margin-top: -17px;" data-id="inputSearchProd" type="text" placeholder="Enter Product Family name" onkeyup={searchFamilyChange}></lightning-input>
+                
+                <div class="slds-scrollable_y slds-var-m-top_small" style="height: 145px;">
+                    <div class="slds-scrollable_x">
+                        <div class="slds-form-element__control">
+                            
+                            <div class="slds-grid">
+                                <lightning-input data-id="allbox4" class="slds-checkbox slds-size_2-of-3" type="checkbox" value="" onchange={selectAllFamilies} label="Select All"></lightning-input>
+                                <a name="clearFilter" data-id="family" class="slds-float_right slds-size_1-of-4 clear-filter" style="text-align: right" onclick={clearFilters}>Clear</a>
+                            </div>
+                            <template for:each={filterOptions.families} for:item="family">
+                                
+                                <lightning-input key={family.MnIRP__DataVisibilityName__c} type="checkbox" data-id="box4" value="" label={family.Name} name={family.MnIRP__DataVisibilityName__c} onchange={loadPriceTypes}></lightning-input>
+                                
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slds-col slds-size_2-of-12">
+            <div>
+                <legend class="slds-form-element__legend slds-form-element__label">Region</legend>
+            </div><br>
+
+            <div class="slds-box slds-box_x-small slds-theme_default slds-container_small slds-var-m-top_small slds-var-m-around_x-small" style="height: 200px;border: 1px solid #b4b2b2;">
+                
+                <lightning-input style="margin-top: -17px;" data-id="inputSearchRegion" type="text" placeholder="Enter Region name" onkeyup={searchRegionChange}></lightning-input>
+                
+                <div class="slds-scrollable_y slds-var-m-top_small" style="height: 145px;">
+                    <div class="slds-scrollable_x">
+                        <div class="slds-form-element__control">
+                            <div class="slds-grid">
+
+                                <lightning-input  data-id="allbox1" class="slds-checkbox slds-size_2-of-3" type="checkbox" value="" onchange={selectAll} label="Select All"></lightning-input>
+                                <a name="clearFilter" id="clearRegionFilter" data-id="region" class="slds-float_right slds-size_1-of-4 clear-filter" style="text-align: right" onclick={clearFilters}>Clear</a>
+            
+                            </div>
+                            <template for:each={filterOptions.regions} for:item="reg">
+                                
+                                <lightning-input key={reg.MnIRP__DataVisibilityName__c} type="checkbox" data-id="box1" value="" label={reg.Name} name={reg.MnIRP__DataVisibilityName__c} onchange={loadCountries}></lightning-input>
+                                
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slds-col slds-size_2-of-12">
+            <div>
+                <legend class="slds-form-element__legend slds-form-element__label">Country</legend>
+            </div><br>
+
+            <div class="slds-box slds-box_x-small slds-theme_default slds-container_small slds-var-m-top_small slds-var-m-around_x-small" style="height: 200px;border: 1px solid #b4b2b2;">
+                
+                <lightning-input style="margin-top: -17px;" data-id="inputSearchCountry" type="text" placeholder="Enter Country name" onkeyup={searchCountryChange}></lightning-input>
+                
+                <div class="slds-scrollable_y slds-var-m-top_small" style="height: 145px;">
+                    <div class="slds-scrollable_x">
+                        <div class="slds-form-element__control">
+                            <div class="slds-grid">
+
+                                <lightning-input  data-id="allbox2" class="slds-checkbox slds-size_2-of-3" type="checkbox" value="" onchange={selectAll} label="Select All"></lightning-input>
+                                <a name="clearFilter" id="clearCountryFilter" data-id="country" class="slds-float_right slds-size_1-of-4 clear-filter" style="text-align: right" onclick={clearFilters}>Clear</a>
+                                
+                            </div>
+                            <template for:each={filterOptions.countries} for:item="coun">
+                                
+                                <lightning-input key={coun.MnIRP__ISOCode__c} type="checkbox" data-id="box2" value="" label={coun.Name} name={coun.MnIRP__ISOCode__c} onchange={loadPriceTypesFromCountries}></lightning-input>
+                                
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slds-col slds-size_2-of-12">
+
+            <div class="slds-var-m-around_x-small">
+                <lightning-input type="date" label="Effective Start Date" value={startDate} onchange={handleDateChange}></lightning-input>
+            </div>
+            
+        </div>
+        <!-- <div class="slds-col slds-size_2-of-12 ">
+            <div>
+                <legend class="slds-form-element__legend slds-form-element__label">Price Types</legend>
+            </div> <br>
+
+            <div class="slds-box slds-box_x-small slds-theme_default slds-container_small slds-var-m-top_small slds-var-m-around_x-small" style="height: 200px;border: 1px solid #b4b2b2;">
+                <div class="slds-scrollable_y">
+                    <div class="slds-scrollable_x">
+                        <div class="slds-form-element__control">
+                            <div class="slds-grid">
+                                
+                                <lightning-input  data-id="allbox5" class="slds-checkbox slds-size_2-of-3" type="checkbox" value="" onchange={selectAll} label="Select All"></lightning-input>
+                                <a name="clearFilter" id="clearPriceTypeFilter" data-id="priceType" class="slds-float_right slds-size_1-of-4 clear-filter" style="text-align: right" onclick={clearFilters}>Clear</a>
+                                
+                            </div>
+                            <template for:each={filterOptions.priceTypes} for:item="priceType">
+                                
+                                <lightning-input key={priceType.Id} type="checkbox" data-id="box5" value="" label={priceType.Name} name={priceType.Id} onchange={selectPriceTypes}></lightning-input>
+                                
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> -->
+
+    </div>
+
+    <div class="slds-size_4-of-4 slds-medium-size_5-of-5 slds-small-size_1-of-1">
+
+    </div>
+	
+	<div>
+        <template if:true={warningFlag}>
+            <p style="color: red; font-size: 16px; text-align: left; padding-left: 15px">Error: Too Many records are processed. Please refine your search</p>
+        </template>
+    </div>
+
+    <div class="slds-var-m-top_x-large slds-align_absolute-center">
+        <lightning-button  variant="brand" name="Get Data" label="Search" onclick={getAllData} ></lightning-button>
+    </div><br><br>
+
+    <template lwc:if={showTable}>
+        <c-n-v-s_-revenue-deduction-table lwc:ref="childCmp"></c-n-v-s_-revenue-deduction-table>
+    </template>
+
+</lightning-card>
+
+</template>
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+Java Script
+---------------------------------------------------------------------------------------------------------------------
+
+import { LightningElement, api, track } from 'lwc';
+import LOADDATA from '@salesforce/apex/NVS_RevenueDeductionController.loadData';
+import GETCOUNTRIES from '@salesforce/apex/NVS_RevenueDeductionController.getCountries';
+import LOADPRODREGION from '@salesforce/apex/NVS_RevenueDeductionController.loadProdRegion';
+import GETPRICETYPES from '@salesforce/apex/NVS_RevenueDeductionController.getPriceTypes';
+import LOADCOUNTRYPRICETYPE from '@salesforce/apex/NVS_RevenueDeductionController.loadCountryPricetype';
+
+export default class NVS_RevenueDeductionCmp extends LightningElement {
+
+    @track Spinner = false; // Set this property to true to show the spinner
+	@track showTable = false;
+    @track startDate = '';
+	
+	@track filterOptions = {};
+    @track families = [];
+    @track regions = [];
+    @track countries = [];
+
+    @track selectedGroups = [];
+    @track selectedTiers = [];
+    @track selectedFamilies = [];
+    @track selectedRegions = [];
+    @track selectedCountries = [];
+    @track selectedPricetypes = [];
+    
+    @track renderReg = false;
+    @track rendercoun = false;
+    @track rendergroup = false;
+    @track renderprod = false;
+    @track renderprice = false;
+
+    @track warningFlag = false; 
+    
+    connectedCallback(){
+        this.Spinner = true;
+        
+        this.loadData(false);
+        this.setDefaultStartDate();
+
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 3000);
+    }
+
+    setDefaultStartDate(){
+        let dt = new Date();
+
+        this.startDate = dt.toISOString().split('T')[0];
+        console.log('Start Date : '+this.startDate);
+    }
+
+    handleDateChange(event){
+        this.startDate = event.target.value;
+        console.log('Start Date : '+this.startDate);
+    }
+
+    selectAll(event) {
+
+        //console.log('Inside Select All');
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        let selectedHeaderCheck = event.target.checked;
+        let boxNum = event.target.dataset.id;
+
+        boxNum = boxNum.substring(3,7); 
+        let selectedIds = [];
+        
+        let getAllId = this.template.querySelectorAll(`[data-id="${boxNum}"]`);
+
+        if (selectedHeaderCheck === true) {
+            getAllId.forEach((item) => {
+                item.checked = true;
+                selectedIds.push(item.name);
+            });
+        } else {
+            getAllId.forEach((item) => {
+                item.checked = false;
+            });
+        }
+
+        if (boxNum === 'box1') {
+            if (selectedHeaderCheck === true) {
+                this.selectedRegions = selectedIds;
+            } else {
+                this.selectedRegions = [];
+            }
+            
+            this.selectedCountries = [];
+            this.resetSelection("box2");
+
+            this.selectedPricetypes = [];
+            this.resetSelection("box5");
+
+            this.LoadCountries(this.selectedRegions);
+            this.reLoad(this.selectedCountries);
+        } else if (boxNum === 'box2') {
+            if (selectedHeaderCheck === true) {
+                this.selectedCountries = selectedIds;
+            } else {
+                this.selectedCountries = [];
+            }
+            
+            this.selectedPricetypes = [];
+            this.resetSelection("box5");
+            this.reLoad(this.selectedCountries);
+        } else if (boxNum === 'box3') {
+            if (selectedHeaderCheck === true) {
+                this.selectedGroups = selectedIds;
+            } else {
+                this.selectedGroups = [];
+            }
+            
+            this.selectedRegions = [];
+            this.resetSelection("box1");
+
+            this.selectedFamilies = [];
+            this.resetSelection("box4");
+
+            this.selectedPricetypes = [];
+            this.resetSelection("box5");
+
+            this.selectedCountries = [];
+            this.resetSelection("box2");
+
+            this.LoadCountries([]);
+            this.getPriceTypes(this.selectedCountries,this.selectedFamilies);
+            this.getProducts(this.selectedCountries,this.selectedGroups);
+        } else if (boxNum === 'box4') {
+            if (selectedHeaderCheck === true) {
+                this.selectedFamilies = selectedIds;
+            } else {
+                this.selectedFamilies = [];
+            }
+            
+            this.selectedCountries = [];
+            this.resetSelection("box2");
+            
+            this.selectedPricetypes = [];
+            this.getPriceTypes(this.selectedCountries,this.selectedFamilies);
+
+        } else if (boxNum === 'box5') {
+            if (selectedHeaderCheck === true) {
+                this.selectedPricetypes = selectedIds;
+            } else {
+                this.selectedPricetypes = [];
+            }
+            
+        }
+    }
+
+    resetSelection(boxNum){
+        let boxItems = this.template.querySelectorAll(`[data-id="${boxNum}"]`);
+        if(boxItems){
+            boxItems.forEach(item =>{
+                if(item.checked == true){
+                    item.checked = false;
+                }
+            })
+        }
+        
+        if (boxNum !== 'box6') {
+            let allCheckbox = this.template.querySelector(`[data-id="all${boxNum}"]`);
+            if (allCheckbox) {
+                allCheckbox.checked = false;
+            }
+        }
+    }
+
+
+	loadCountries(event) {
+        let selectedHeaderCheck = event.target.checked;
+        let selectedRegions = [];
+        let actionReg = event.target.name;
+
+        const getAllId = this.template.querySelectorAll('[data-id="box1"]');
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        getAllId.forEach((element) => {
+            if (element.checked) {
+                selectedRegions.push(element.name);
+            }
+            else{
+                const indexToRemove = selectedRegions.indexOf(element.name);
+                if (indexToRemove !== -1) {
+                    selectedRegions.splice(indexToRemove, 1);
+                }    
+            }
+        }); 
+
+        this.selectedCountries = [];
+        this.resetSelection("box2");
+
+        this.resetSelection("box5");
+        this.selectedPricetypes = [];
+        this.selectedRegions = selectedRegions;
+
+        this.LoadCountries(selectedRegions);
+        this.reLoad(this.selectedCountries);
+        this.selectAllSelection('allbox1', this.regions, this.selectedRegions);
+
+        this.template.querySelector('[data-id="inputSearchCountry"]').value = '';
+    }
+
+    
+	loadFamilies(event) {
+        let selectedHeaderCheck = event.target.checked;
+        let boxNum = event.target.dataset.id;
+        let getAllId = this.template.querySelectorAll(`[data-id="${boxNum}"]`);
+        
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        let selectedIds = [];
+
+        getAllId.forEach((element) => {
+            if (element.checked) {
+                selectedIds.push(element.name);
+            }
+            else{
+                const indexToRemove = selectedIds.indexOf(element.name);
+                if (indexToRemove !== -1) {
+                    selectedIds.splice(indexToRemove, 1);
+                }    
+            }
+        });            
+
+        this.selectedGroups = selectedIds;
+
+        this.selectedFamilies = [];
+        this.resetSelection("box4");
+
+        this.selectedRegions = [];
+        this.resetSelection("box1");
+
+        this.selectedCountries = [];
+        this.resetSelection("box2");
+
+        this.selectedPricetypes = [];
+        this.resetSelection("box5"); 
+
+        
+        this.LoadCountries([]);
+        this.reLoad(this.selectedCountries);
+        this.getPriceTypes(this.selectedCountries, this.selectedFamilies);
+        this.getProducts(this.selectedCountries, this.selectedGroups);
+        this.selectAllSelection('allbox3', this.filterOptions.groups, this.selectedGroups);
+        
+        this.template.querySelector('[data-id="inputSearchRegion"]').value = '';
+        this.template.querySelector('[data-id="inputSearchCountry"]').value = '';
+    }
+	
+	loadPriceTypesFromCountries(event) {
+        const selectedHeaderCheck = event.target.checked;
+        const actionCountry = event.target.name;
+        let selectedCountries = [];
+
+        const getAllId = this.template.querySelectorAll('[data-id="box2"]');
+        
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        getAllId.forEach((element) => {
+            if (element.checked) {
+                selectedCountries.push(element.name);
+            }
+            else{
+                const indexToRemove = selectedCountries.indexOf(element.name);
+                if (indexToRemove !== -1) {
+                    selectedCountries.splice(indexToRemove, 1);
+                }    
+            }
+        });
+
+        this.selectedCountries = selectedCountries;
+        this.selectedPricetypes = [];
+        this.resetSelection("box5");
+        
+        this.reLoad(this.selectedCountries);
+        this.selectAllSelection('allbox2', this.countries, this.selectedCountries);
+    }
+
+    loadPriceTypes(event) {
+        const selectedHeaderCheck = event.target.checked;
+        const actionProd = event.target.name;
+        let selectedFamilies = [];
+    
+    
+        const getAllId = this.template.querySelectorAll('[data-id="box4"]');
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        getAllId.forEach((element) => {
+            if (element.checked) {
+                selectedFamilies.push(element.name);
+            }
+            else{
+                const indexToRemove = selectedFamilies.indexOf(element.name);
+                if (indexToRemove !== -1) {
+                    selectedFamilies.splice(indexToRemove, 1);
+                }    
+            }
+        });
+    
+        this.selectedPricetypes = [];
+        this.resetSelection("box5");
+
+        this.selectedCountries = [];
+        this.resetSelection("box2");
+
+        this.selectedFamilies = selectedFamilies;
+    
+        this.getPriceTypes(this.selectedCountries, selectedFamilies);
+        this.selectAllSelection('allbox4', this.families, this.selectedFamilies);
+    }
+
+    selectPriceTypes(event) {
+        const selectedHeaderCheck = event.target.checked;
+        let selectedPriceTypes = [];
+    
+        const getAllId = this.template.querySelectorAll('[data-id="box5"]');
+
+        getAllId.forEach((element) => {
+            if (element.checked) {
+                selectedPriceTypes.push(element.name);
+            }
+            else{
+                const indexToRemove = selectedPriceTypes.indexOf(element.name);
+                if (indexToRemove !== -1) {
+                    selectedPriceTypes.splice(indexToRemove, 1);
+                }    
+            }
+        });
+    
+        this.selectedPricetypes = selectedPriceTypes;
+
+        this.selectAllSelection('allbox5', this.filterOptions.priceTypes, this.selectedPricetypes);
+    }
+
+    searchFamilyChange(event) {
+        const searchKey = event.target.value;
+        this.searchKeyChange('families', 'selectedFamilies', 'inputSearchProd', 'box4', searchKey);
+    }
+
+    searchRegionChange(event) {
+        const searchKey = event.target.value;
+        this.searchKeyChange('regions', 'selectedRegions', 'inputSearchRegion', 'box1', searchKey);
+    }
+
+    searchCountryChange(event) {
+        const searchKey = event.target.value;
+        this.searchKeyChange('countries', 'selectedCountries', 'inputSearchCountry', 'box2', searchKey);
+    }
+
+    clearFilters(event) {
+        let type = event.target.dataset.id;
+        const selectedGroups = this.selectedGroups;
+        const selectedFamilies = this.selectedFamilies;
+        const selectedRegions = this.selectedRegions;
+        const selectedCountries = this.selectedCountries;
+        const selectedPricetypes = this.selectedPricetypes;
+
+        if (type == 'group' && selectedGroups.length > 0) {
+            this.selectedGroups = [];
+            this.selectedFamilies = [];
+            this.selectedRegions = [];
+            this.selectedCountries = [];
+            this.selectedPricetypes = [];
+            this.rendergroup = true;
+            
+            this.resetSelection("box2");
+            this.resetSelection("box1");
+            this.resetSelection("box4");
+            this.resetSelection("box5");
+            this.loadData(true);
+            this.clearCheckBoxes('box3');
+        } else if (type == 'family' && this.selectedFamilies.length > 0) {
+            this.selectedCountries = [];
+            
+            this.resetSelection("box2");
+            this.resetSelection("box5");
+            this.selectedPricetypes = [];
+            this.selectedFamilies = [];
+            this.getPriceTypes([], []);
+            this.clearCheckBoxes('box4');
+        } else if (type == 'region' && this.selectedRegions.length > 0) {
+            this.selectedRegions = [];
+            this.selectedCountries = [];
+    
+            this.resetSelection("box2");
+            
+            this.selectedPricetypes = [];
+           
+            this.resetSelection("box5");
+
+            this.LoadCountries([]);
+            this.reLoad([]);
+            this.clearCheckBoxes('box1');
+        } else if (type == 'country' && this.selectedCountries.length > 0) {
+            this.selectedPricetypes = [];
+            this.selectedCountries = [];
+           
+            this.resetSelection("box5");
+
+            this.reLoad([]);
+            this.clearCheckBoxes('box2');
+        } else if (type == 'priceType' && this.selectedPricetypes.length > 0) {
+            this.selectedPricetypes = [];
+            this.clearCheckBoxes('box5');
+        }
+    }
+
+    
+    selectAllFamilies(event) {
+        const selectedHeaderCheck = event.target.checked;
+        const boxNum = event.target.dataset.id.substring(3, 7);
+        const selectedFamilies = [];
+        const searchString = this.template.querySelector('[data-id="inputSearchProd"]').value;
+        const getAllId = this.template.querySelectorAll(`[data-id="${boxNum}"]`);
+
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        if (searchString === '' || searchString.length == 0) {
+
+            if (selectedHeaderCheck === true) {
+                getAllId.forEach((item) => {
+                    item.checked = true;
+                    selectedFamilies.push(item.name);
+                });
+            } else {
+                getAllId.forEach((item) => {
+                    item.checked = false;
+                    const indexToRemove = selectedFamilies.indexOf(item.name);
+                    if (indexToRemove !== -1) {
+                        selectedFamilies.splice(indexToRemove, 1);
+                    }
+                });
+            }
+
+            if (selectedHeaderCheck) {
+                this.selectedFamilies = selectedFamilies;
+            } else {
+                this.selectedFamilies = [];
+            }
+        } else {
+            if(this.selectedFamilies.length > 0 && this.selectedFamilies != null){
+                selectedFamilies = this.selectedFamilies;
+            }
+
+            if (selectedHeaderCheck === true) {
+                getAllId.forEach((item) => {
+                    item.checked = true;
+                    selectedFamilies.push(item.name);
+                });
+            } else {
+                getAllId.forEach((item) => {
+                    item.checked = false;
+                    const indexToRemove = selectedFamilies.indexOf(item.name);
+                    if (indexToRemove !== -1) {
+                        selectedFamilies.splice(indexToRemove, 1);
+                    }
+                });
+            }
+        }
+
+        this.selectedCountries = [];
+        this.resetSelection("box2");
+
+        this.selectedPricetypes = [];
+        this.resetSelection("box5");
+
+        this.getPriceTypes(this.selectedCountries, this.selectedFamilies);
+    }
+
+    loadFamiliesFromTiers(event) {
+        const selectedHeaderCheck = event.target.checked;
+        const selectedList = event.target.dataset.id;
+        const boxNum = 'box6';
+        const getAllId = this.template.querySelectorAll(`[data-id="${boxNum}"]`);
+        let selectedIds = [];
+
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        getAllId.forEach((element) => {
+            if (element.checked) {
+                selectedIds.push(element.name);
+            }
+            else{
+                const indexToRemove = selectedIds.indexOf(element.name);
+                if (indexToRemove !== -1) {
+                    selectedIds.splice(indexToRemove, 1);
+                }    
+            }
+        });
+
+        this.selectedTiers = selectedIds;
+
+        this.selectedFamilies = [];
+        this.resetSelection("box4");
+
+        this.selectedRegions = [];
+        this.resetSelection("box1");
+
+        this.selectedCountries = [];
+        this.resetSelection("box2");
+
+        this.selectedPricetypes = [];
+        this.resetSelection("box5");
+
+        this.getProducts(this.selectedCountries, this.selectedGroups);
+        this.getPriceTypes(this.selectedCountries, this.selectedFamilies);
+        this.template.querySelector('[data-id="inputSearchProd"]').value = '';
+    }
+
+    // Methods from Helper - Start
+
+    loadData(clearFilters) {
+        this.Spinner = true;
+        // Set the parameters for the Apex method
+        let params = {};
+        LOADDATA()
+            .then(result => {
+                
+                // Handle the successful response
+                this.filterOptions = result;
+                this.families = result.families;
+                this.regions = result.regions;
+                this.countries = result.countries;
+
+                if(this.filterOptions){
+                    this.Spinner = false;
+                }
+               
+            })
+            .catch(error => {
+                this.Spinner = false;
+                // Handle the error
+                console.error('Error loading data:', error);
+            });
+    }
+
+    LoadCountries(regions) {
+        // Set the parameters for the Apex method
+        let params = {
+            regions: regions,
+            products: this.selectedFamilies,
+            tiers: this.selectedTiers
+        };
+
+        GETCOUNTRIES(params)
+            .then(result => {
+                // Handle the successful response
+                this.filterOptions.countries = result;
+                this.countries = result;
+            })
+            .catch(error => {
+                // Handle the error
+                console.error('Error loading countries:', error);
+            });
+    }
+
+    getProducts(selectedCountries, selectedGroups, reload) {
+        // Set the parameters for the Apex method
+        let params = {
+            groupIds: selectedGroups,
+            tiers: this.selectedTiers 
+        };
+
+        LOADPRODREGION(params)
+            .then(result => {
+                // Handle the successful response
+                console.log('Get Products Success');
+                this.filterOptions.families = result.families;
+
+                if (result.families == null || result.families.length === 0) {
+                    this.filterOptions.countries = [];
+                    this.filterOptions.priceTypes = [];
+                }
+
+                this.filterOptions.regions = result.regions;
+                this.families = result.families;
+                this.regions = result.regions;
+            })
+            .catch(error => {
+                // Handle the error
+                console.error('Error loading products:', error);
+            });
+    }
+
+    reLoad(selectedCountries) {
+        
+        let params = {
+            countries: selectedCountries,
+            productGroupIds: this.selectedGroups, 
+            products: this.selectedFamilies, 
+            tiers: this.selectedTiers 
+        };
+
+        GETPRICETYPES(params)
+            .then(result => {
+                // Handle the successful response
+                this.filterOptions.priceTypes = result;
+            })
+            .catch(error => {
+                // Handle the error
+                console.error('Error loading price types:', error);
+            });
+    }
+
+    
+    getPriceTypes(selectedCountries, selectedFamilies) {
+        // Set the parameters for the Apex method
+        let params = {
+            countries: selectedCountries,
+            productGroupIds: this.selectedGroups, 
+            products: selectedFamilies,
+            tiers: this.selectedTiers 
+        };
+
+        this.warningFlag = false;
+
+        LOADCOUNTRYPRICETYPE(params)
+            .then(result => {
+                // Handle the successful response
+                console.log('getPriceTypes success');
+                
+                if (this.filterOptions.families == null || this.filterOptions.families.length == 0) {
+                    result.priceTypes = [];
+                    result.countries = [];
+                }
+                this.filterOptions.priceTypes = result.priceTypes;
+                this.filterOptions.countries = result.countries;
+                this.countries = result.countries;
+            })
+            .catch(error => {
+                // Handle the error
+                console.error('Error loading price types:', JSON.stringify(error.body.message));
+                this.warningFlag = true;
+
+                // Handling errors and resetting component state as needed
+                this.handleErrors(error);
+            });
+    }
+
+    handleErrors(error) {
+
+        if (this.selectedFamilies.length > 0) {
+            this.selectedFamilies = [];
+            this.clearCheckBoxes('box4');
+        }
+
+        if (this.selectedTiers.length > 0) {
+            this.selectedTiers = [];
+            this.clearCheckBoxes('box6');
+        }
+
+        if (this.selectedRegions.length > 0) {
+            this.selectedRegions = [];
+            this.clearCheckBoxes('box1');
+        }
+
+        this.LoadCountries([]);
+    }
+
+    clearCheckBoxes(type) {
+        let boxNum = type;
+        let getAllId = this.template.querySelectorAll(`[data-id="${boxNum}"]`);
+
+        this.Spinner = true;
+        setTimeout(() => {
+            this.Spinner = false;
+        }, 2000);
+
+        if (getAllId) {
+            getAllId.forEach(checkbox => {
+                if (checkbox.checked == true) {
+                    checkbox.checked = false;
+                }
+            });
+        }
+
+        if (boxNum !== 'box6') {
+            let allCheckbox = this.template.querySelector(`[data-id="all${boxNum}"]`);
+            if (allCheckbox) {
+                allCheckbox.checked = false;
+            }
+        }
+    }
+
+    selectAllSelection(boxNum, options, selectedOptions) {
+        
+        const searchString = this.template.querySelector('[data-id="inputSearchProd"]').value;
+        const element = this.template.querySelector(`[data-id="${boxNum}"]`);
+    
+        if (options.length == selectedOptions.length) {
+            element.checked = true;
+        } else {
+            element.checked = false;
+        }
+    }
+
+    searchKeyChange(selection, selectedOption, searchBox, optionBox, searchKey) {
+
+        let searchString = searchKey;
+        let optionsList = this[selection];
+    
+        let selectedIds = [];
+        if (this[selectedOption].length != 0) {
+            selectedIds = this[selectedOption];
+        }
+
+        var searchedOptions = [];
+        optionsList.forEach(item =>{
+            if(item.Name.toLowerCase().indexOf(searchString.toLowerCase()) >= 0){
+                searchedOptions.push(item);
+            }
+        });
+
+        this.filterOptions[selection] = searchedOptions;
+
+        setTimeout(() => {
+            let getAllId = this.template.querySelectorAll('[data-id="' + optionBox + '"]');
+            
+            if (getAllId) {
+                getAllId.forEach(item => {
+                    if (selectedIds.indexOf(item.name) !== -1 ) {
+                        item.checked = true;
+                    }
+                });
+            }
+        }, 300);
+
+        
+        
+        this.selectAllSelection('all'+optionBox, this[selection], this[selectedOption]);
+    }
+
+    // Methods from Helper - End
+
+    getAllData(event){
+
+        this.showTable = true;
+        
+        // console.log('Selected Groups Length : '+this.selectedGroups.length);
+        // console.log('Selected Regions : '+this.selectedGroups);
+
+        // console.log('Selected Tiers Length : '+this.selectedTiers.length);
+        // console.log('Selected Tiers : '+this.selectedTiers);
+
+        // console.log('Selected Product Families Length : '+this.selectedFamilies.length);
+        // console.log('Selected Product Families : '+this.selectedFamilies);
+
+        // console.log('Selected Regions Length : '+this.selectedRegions.length);
+        // console.log('Selected Regions : '+this.selectedRegions);
+
+        // console.log('Selected Countries Length : '+this.selectedCountries.length);
+        // console.log('Selected Countries : '+this.selectedCountries);
+
+
+        if(this.showTable){
+            this.Spinner = true;
+            setTimeout(() => {
+
+                let params = {
+                    groups : this.selectedGroups,
+                    tiers : this.selectedTiers,
+                    families : this.selectedFamilies,
+                    countries : this.selectedCountries,
+                    regions : this.selectedRegions,
+                    startDate : this.startDate
+                };
+
+                const childComponent = this.refs.childCmp;
+
+                if(childComponent){
+                    //console.log('In Parent --> Called Child Component');
+                    childComponent.getDeductionData(params);
+                }
+                this.Spinner = false;
+            }, 2000);
+        }
+        
+    }
+
+}
+
+--------------------------------------------------------------------------------------------------------------
+
+XML
+--------------------------------------------------------------------------------------------------------------
+
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__Tab</target>
+    </targets>
+</LightningComponentBundle>

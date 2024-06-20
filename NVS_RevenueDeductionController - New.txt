@@ -1,0 +1,354 @@
+public without sharing class NVS_RevenueDeductionController {
+    public static Map<String, String> GroupRegionMap = new Map<String, String>{'SandozBiopharma'=>'SD','Oncology'=>'ON','General Medicines'=>'GE', 'Alcon Surgical'=>'AL','Gene Therapies'=>'GT'};
+    public static Map<String,List<MnIRP__MnRegion__c>> regionGroupMap = new Map<String,List<MnIRP__MnRegion__c>>();
+    public static map<string,string> buMap = new map<string,string>{'General Medicines'=>'GENMED','Oncology'=>'ONCOLOGY','SandozBiopharma'=>'SANDOZ','Gene Therapies' =>'GeneTherapies'};
+    public static NVS_DataUtilityClass utils = new NVS_DataUtilityClass();
+    private static final Integer LIMIT_PRODUCT_ROWS = 1000;
+    public static final Integer MAX_RECORDS_ALLOWED = 10000;
+
+    Public class FilterWrapper{
+        //get all contact list
+        @AuraEnabled public List<MnIRP__MnRegion__c> regions {get;set;}
+        @AuraEnabled public List<String> tiers {get;set;} 
+        @AuraEnabled public List<MnIRP__MnCountry__c> countries {get;set;} 
+        @AuraEnabled public List<MnIRP__MnProductGroup__c> groups {get;set;} 
+        @AuraEnabled public List<MnIRP__MnProduct__c> families {get;set;} 
+        @AuraEnabled public List<MnIRP__MnPriceType__c> priceTypes {get;set;} 
+       
+    }
+    
+    @AuraEnabled
+    Public static filterWrapper loadData(){
+        //get all contact list
+        FilterWrapper filters = new FilterWrapper();
+        filters.regions = getAllRegions();
+        filters.tiers = getTiers();
+        filters.countries = getCountries(new List<String>(),new List<String>(),new List<String>());
+        filters.groups = getGroups(new List<id>());
+        filters.families = getProducts(new List<String>(),new List<id>(),new List<String>());
+        filters.priceTypes = getPriceTypes(new List<String>(),new List<id>(),new List<String>(),new List<String>());
+    
+        return filters;
+    }
+    public static List<Id> getProductsfromTiers(List<String> tierNames){
+        List<MnIRP__MnProduct__c> plist = new List<MnIRP__MnProduct__c>();
+        String query = 'select id, name from MnIRP__MnProduct__c where ';
+        List<Id> productIds;
+        integer count=0;
+        if(tierNames != null && tierNames.size()>0 && !tierNames.contains('No Tier')){
+            query += ' NVS_Product_Tier__c in : tierNames ';
+        }
+        system.debug('Query+++++====='+query);
+        plist = Database.query(query);
+        productIds = new List<Id>(new Map<Id, MnIRP__MnProduct__c>(plist).keySet());
+        return productIds;
+    }
+    
+    @AuraEnabled
+    Public static List<String> getTiers(){
+        List<String> tiers = new List<String>();
+        tiers.add('No Tier');
+        List<SelectOption> options = new List<SelectOption>();
+        Schema.DescribeFieldResult fieldResult = MnIRP__MnProduct__c.NVS_Product_Tier__c.getDescribe();
+        List<Schema.PicklistEntry> ple = fieldResult.getPicklistValues();
+        for( Schema.PicklistEntry f : ple)
+        {
+            tiers.add(f.getValue());
+            //options.add(new SelectOption(f.getLabel(), f.getValue()));
+        }     
+        return tiers;
+    }
+    
+    
+    @AuraEnabled
+    Public static FilterWrapper loadProdRegion(List<Id> groupIds,List<String> tiers){
+        FilterWrapper filters = new FilterWrapper();
+        
+        filters.families = getProducts(new List<id>(),groupIds,tiers);
+        filters.regions = getRegionsByGroups(groupIds);
+        return filters;
+    }
+    
+    @AuraEnabled
+    Public static List<MnIRP__MnRegion__c> getRegions(){
+        List<MnIRP__MnRegion__c> regions = utils.getRegionsWithDatavisibility();
+        return regions;        
+    }
+    @AuraEnabled
+    Public static List<MnIRP__MnRegion__c> getAllRegions(){
+        List<MnIRP__MnRegion__c> regions = new  List<MnIRP__MnRegion__c>();
+        regions = getRegionsByGroups(new List<Id>());
+        return regions;        
+    }
+    
+    private static List<MnIRP__MnRegion__c> getRegionsByGroups(List<Id> groupIds){
+        List<String> groups = new List<String>();
+        List<MnIRP__MnProductGroup__c> groupsList = new List<MnIRP__MnProductGroup__c>();
+        //List<Id> groupIds = new List<Id>();
+        List<MnIRP__MnRegion__c> regions = new List<MnIRP__MnRegion__c>();
+        Set<MnIRP__MnRegion__c> regionSet = new Set<MnIRP__MnRegion__c>();
+        if(groupIds.size()==0 || groupIds==null){
+            groupsList = getGroups(new List<id>());
+            for(MnIRP__MnProductGroup__c grp : groupsList){
+                
+                System.debug('Line 94-' +grp.Name);
+                groupIds.add(grp.id);
+                
+            }
+        }
+        
+        if(groupIds.size()>0 && groupIds!=null){
+            for(MnIRP__MnProductGroup__c pg : [select Name, id from MnIRP__MnProductGroup__c where Id In : groupIds] ){
+                groups.add(pg.name);
+            }
+            List<String> groupList = new List<String>();
+            List<String> regionPrefix = new List<String>();
+            for(String x : groups){
+                if(!x.contains('Alcon')){
+                    System.debug('line 116-' +x);
+                    regionPrefix.add(GroupRegionMap.get(x));
+                    groupList.add(x);
+                }
+            }
+            regionPrefix.sort();
+            groupList.sort();
+            
+            Map<String,List<MnIRP__MnRegion__c>> regionsMap = new Map<String,List<MnIRP__MnRegion__c>>();
+            for(MnIRP__MnRegion__c region :  getRegions()){
+                String RegName = region.Name;
+                
+                String prefix = RegName.substring(0, 2);
+                List<String> divisions = region.NVS_Business_Units__c?.split(';');
+                if(divisions!=null && divisions.size()>0){
+                    for(string division:divisions){
+                        List<MnIRP__MnRegion__c> reg = new List<MnIRP__MnRegion__c>();
+                        if(regionsMap.get(division)==null){
+                            reg.add(region);
+                        }
+                        else{
+                            reg = regionsMap.get(division);
+                            reg.add(region);
+                        }
+                        regionsMap.put(division,reg);
+                    }
+                }
+                
+            }
+            
+            if(regionsMap != null && !regionsMap.isEmpty()){
+                for(String division:groupList){
+                    regionSet.addAll(regionsMap.get(division));
+                }
+            }
+            
+        }
+        regions.addAll(regionSet);
+        return  regions;
+    }
+    
+    
+    @AuraEnabled 
+    public static  List<MnIRP__MnProduct__c> getProducts(List<String> countries, List<Id> groups,list<String> tiers) {
+        List<MnIRP__MnProduct__c> products;
+        List<id> productIds;
+        List<id> productIds2;
+        Integer LIMIT_PRODUCT_ROWS = 1000;
+        
+        if(countries != null && countries.size()>0) {
+            products = utils.getProductsByCountries(getCountryIds(countries), groups,LIMIT_PRODUCT_ROWS);
+            
+        } else if(groups != null && groups.size()>0) {
+            products = utils.getProductIdsForProductGroupIds(groups,LIMIT_PRODUCT_ROWS,tiers);
+        } else {
+            products = utils.getProductIdsWithDataVis(LIMIT_PRODUCT_ROWS,tiers);
+        }
+        return products;
+    }
+    @AuraEnabled 
+    public static  List<MnIRP__MnCountry__c> getCountries(list<String> regions,List<String> products,List<String> tiers) {
+        String query = 'select Id, Name, MnIRP__ISOCode__c from MnIRP__MnCountry__c ';
+        list<Id> prodIds = new List<Id>();
+        List<Id> countryIds = new List<Id>();
+        boolean noProducts = false;
+        if(regions.size()>0 && regions != null){
+            List<ID> reg = getRegionIds(regions);
+            countryIds = utils.getCountriesIdForRegionIds(reg);
+        }
+        prodIds = getProductIds(products);
+        
+        if((prodIds.size()==0 || prodIds==null) && tiers!=null && tiers.size()>0 && !tiers.contains('No Tier') ){
+            prodIds.addAll(getProductsfromTiers(tiers));
+        }
+        if((prodIds.size() > 0 && prodIds !=null) ||( (tiers!=null && tiers.size()>0) && !tiers.contains('No Tier'))){
+            String query1;
+            integer count = 0;
+            //query1 = 'SELECT MnIRP__MnCountry__c country FROM MnIRP__MnCountryProductSKU__c WHERE ';
+            
+            query1 = 'SELECT MnIRP__MnCountry__c country FROM MnIRP__MnCountryProductSKU__c  ';
+            if(prodIds.size() > 0 && prodIds !=null){
+                count++;
+                query1 +='WHERE';
+                query1 +=' MnIRP__MnProductSKU__r.MnIRP__MnProduct__c IN : prodIds ';
+            }
+            
+            if(countryIds.size()>0 && countryIds !=null)
+                query1 += ' and MnIRP__MnCountry__c in : countryIds ';
+            query1 += ' group by MnIRP__MnCountry__c ';
+            System.debug('214'+query1);
+            List<AggregateResult> aggregateResults = Database.query(query1);
+            
+            if (aggregateResults != null || aggregateResults.size() > 0) {
+                Set<Id> countryIdSet = new Set<Id>();
+                countryIds.clear();
+                for (AggregateResult aggregateResult : aggregateResults)  {
+                    countryIdSet.add((Id)aggregateResult.get('country'));
+                }
+                countryIds.addAll(countryIdSet);
+            }
+        }
+        if(countryIds.size()>0 && countryIds!=null)
+            query += ' where id in : countryIds ';
+        query += ' order By Name ';
+        List<MnIRP__MnCountry__c> countries = new List<MnIRP__MnCountry__c>();
+        System.debug('query228 '+query);
+        countries = Database.query(query);
+        
+        return countries;
+    }
+    
+    @AuraEnabled
+    Public static List<MnIRP__MnProductGroup__c> getGroups(List<Id> countries){
+        return utils.getProductGroupsForCountryByDataVis(countries);
+    }
+    
+    @AuraEnabled
+    Public static FilterWrapper loadCountryPricetype(List<String> countries,List<Id> productGroupIds,List<String> products,List<String> tiers){
+        FilterWrapper filters = new FilterWrapper();
+        filters.priceTypes = getPriceTypes(countries, productGroupIds, products,tiers);
+        filters.countries = getCountries( New List<String>(),products,tiers);
+        return filters;
+    }
+    
+    
+    @AuraEnabled
+    Public static List<MnIRP__MnPriceType__c> getPriceTypes(List<String> countries, List<Id> productGroupIds, List<String> products,List<String> tiers){
+        Map<String, Schema.SObjectField> fieldsMap= getPriceTypeFields();
+        string field;
+        List<MnIRP__MnProductGroup__c> groups = new List<MnIRP__MnProductGroup__c>();
+        List<String> groupNames = new List<String>();
+        Boolean hasSandoz = false;
+        string BU;
+        string queryand='';
+        if(productGroupIds !=null && productGroupIds.size()>0){
+            groups = [select Id,Name from MnIRP__MnProductGroup__c where id in : productGroupIds];
+        }
+        else{
+            groups = getGroups(new List<id>());
+        }
+        List<String> queryString = new List<String>(); 
+        for(MnIRP__MnProductGroup__c grp : groups){
+            
+            if(buMap.containsKey(grp.Name)){
+                BU = buMap.get(grp.Name);
+                Pattern nonAlphanumeric = Pattern.compile('[^a-zA-Z0-9]');
+                Matcher matcher = nonAlphanumeric.matcher(BU);
+                BU = matcher.replaceAll('');
+                field='NVS_'+BU+'_FLAG__c';
+                if(fieldsMap.containsKey(field)){
+                    queryString.add(' NVS_'+BU+'_FLAG__c  = true ');  
+                }       
+            }
+            else{
+                BU = grp.Name.deleteWhitespace();
+                Pattern nonAlphanumeric = Pattern.compile('[^a-zA-Z0-9]');
+                Matcher matcher = nonAlphanumeric.matcher(BU);
+                BU = matcher.replaceAll('');
+                field='NVS_'+BU+'_FLAG__c';
+                if(fieldsMap.containsKey(field)){
+                    queryString.add(' NVS_'+BU+'_FLAG__c  = true ');  
+                }    
+                
+            }
+            
+            
+            // queryString.add('NVS_Business_Units__c INCLUDES (\''+grp.Name+'\')');
+            /* if(grp.Name.contains('SandozBiopharma'))
+queryString.add('NVS_SANDOZ_FLAG__c = true');
+if(grp.Name.contains('Oncology'))
+queryString.add('NVS_ONCOLOGY_FLAG__c = true');
+if(grp.Name.contains('General Medicines'))
+queryString.add('NVS_GENMED_FLAG__c = true');*/
+        }
+        
+        
+        List<MnIRP__MnPriceType__c> priceTypes  = new List<MnIRP__MnPriceType__c>();
+        List<Id> pids = new List<Id>(new Map<Id, MnIRP__MnPriceType__c>(utils.getPriceTypesWithDatavisibility(getCountryIds(countries), productGroupIds, getProductIds(products),tiers)).keySet());
+        
+        String query = 'select Id, Name, MnIRP__SortOrder__c from MnIRP__MnPriceType__c where id in : pids ';
+        
+        if(groups.size()<5 && groups.size()>0){
+            list<MnIRP__MnProductGroup__c> ProductGroup = [select name from MnIRP__MnProductGroup__c];
+            
+            for(MnIRP__MnProductGroup__c pgroup : ProductGroup ){
+                
+                if(buMap.containsKey(pgroup.Name)){
+                    BU = buMap.get(pgroup.Name);
+                    field='NVS_'+BU+'_FLAG__c';
+                    if(fieldsMap.containsKey(field)){
+                        queryand += (queryand != '') ? ' AND ' : queryand;
+                        queryand += ' NVS_'+BU+'_FLAG__c  = false '; 
+                    }   
+                    
+                    
+                }
+                else{
+                    BU = pgroup.Name.deleteWhitespace().toUpperCase();
+                    Pattern nonAlphanumeric = Pattern.compile('[^a-zA-Z0-9]');
+                    Matcher matcher = nonAlphanumeric.matcher(BU);
+                    BU = matcher.replaceAll('');
+                    field='NVS_'+BU+'_FLAG__c';
+                    if(fieldsMap.containsKey(field)){
+                        queryand += (queryand != '') ? ' AND ' : queryand;
+                        queryand += ' NVS_'+BU+'_FLAG__c  = false '; 
+                    }     
+                }
+                
+            }
+            
+            // query += ' AND ((NVS_GENMED_FLAG__c = false AND NVS_ONCOLOGY_FLAG__c = false AND NVS_SANDOZ_FLAG__c = false) ';
+            query+= 'AND ((' +queryand +')';
+            
+            // query += ' AND ((NVS_Business_Units__c=null) ';
+            query += ' or ( ';
+            query += String.join(queryString, ' OR ');
+            query += ' )) ';
+        }
+        query+=' order by MnIRP__SortOrder__c ';
+        System.debug(query);
+        return Database.query(query);
+    }
+    
+    public static Map<String, Schema.SObjectField> getPriceTypeFields(){ 
+        Map <String,Schema.SObjectType> gd = Schema.getGlobalDescribe();
+        Schema.SObjectType sobjType = gd.get('MnIRP__MnPriceType__c');
+        Schema.DescribeSObjectResult r = sobjType.getDescribe();
+        Map<String, Schema.SObjectField> fieldsMap = r.fields.getMap();
+        return fieldsMap;
+    }
+    
+    
+    private static List<Id> getRegionIds(List<String> regDataVisName){
+        List<Id> regIds = new List<Id>(new Map<Id, MnIRP__MnRegion__c>([select id from MnIRP__MnRegion__c where MnIRP__DataVisibilityName__c In : regDataVisName]).keySet());
+        return regIds;
+    }
+    
+    private static List<Id> getCountryIds(List<String> counIso){
+        return new List<Id>(new Map<Id, MnIRP__MnCountry__c>([select id from MnIRP__MnCountry__c where MnIRP__ISOCode__c In : counIso Limit 1000]).keySet());
+    }
+    
+    private static List<Id> getProductIds(List<String> proDataVisName){
+        List<Id> prodIds = new List<Id>(new Map<Id, MnIRP__MnProduct__c>([select id from MnIRP__MnProduct__c where MnIRP__DataVisibilityName__c In : proDataVisName]).keySet());
+        return prodIds;
+    }
+
+}

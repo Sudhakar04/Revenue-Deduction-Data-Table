@@ -1,0 +1,313 @@
+public without sharing class NVS_RevenueDeductionTableController {
+
+    public static NVS_DataUtilityClass utils = new NVS_DataUtilityClass();
+    private static final Integer LIMIT_PRODUCT_ROWS = 1000;
+    public static final Integer MAX_RECORDS_ALLOWED = 10000;
+
+    @AuraEnabled
+    public static List<DeductionRecord> getDeductionRecords(List<Id> groups, List<String> tiers, List<String> families, List<String> countries, List<String> regions, String startDate) {
+        
+        Integer numRecordsAllowed = MAX_RECORDS_ALLOWED;
+        Set<Id> productGroups = new Set<Id>(groups);
+        List<String> productTiers = tiers;
+        Set<Id> productFamilies = new Set<Id>();
+        Set<Id> cntries = new Set<Id>();
+        Set<Id> rgions = new Set<Id>();
+        
+        Date stDate = Date.valueOf(startDate);
+        Date dt = Date.newInstance(stDate.year(), stDate.month(), 1);
+        Date dt2 = dt.addMonths(48);// Forecast Date for next 48 months
+
+        Map<Id,MnIRP__MnProduct__c> pfMap = new Map<Id,MnIRP__MnProduct__c>([SELECT Id,MnIRP__DataVisibilityName__c FROM MnIRP__MnProduct__c WHERE MnIRP__DataVisibilityName__c IN :families]);
+        if(pfMap != null){
+            if(!pfMap.isEmpty()){
+                productFamilies.addAll(pfMap.keySet());
+            }
+        }
+
+        Map<Id,MnIRP__MnRegion__c> regionMap = new Map<Id,MnIRP__MnRegion__c>([SELECT Id,MnIRP__DataVisibilityName__c FROM MnIRP__MnRegion__c WHERE MnIRP__DataVisibilityName__c IN :regions]);
+        if(regionMap != null){
+            if(!regionMap.isEmpty()){
+                rgions.addAll(regionMap.keySet());
+            }
+        }
+
+        Map<Id,MnIRP__MnCountry__c> countryMap = new Map<Id,MnIRP__MnCountry__c>([SELECT Id,MnIRP__ISOCode__c FROM MnIRP__MnCountry__c WHERE MnIRP__ISOCode__c  IN :countries]);
+        if(countryMap != null){
+            if(!countryMap.isEmpty()){
+                cntries.addAll(countryMap.keySet());
+            }
+        }
+
+        System.debug('productGroups : '+productGroups);
+        System.debug('productTiers : '+productTiers);
+        System.debug('productFamilies : '+productFamilies);
+        System.debug('Countries : '+cntries);
+        System.debug('Regions : '+rgions);
+        System.debug('StartDate : '+stDate);
+        System.debug('Date : '+dt);
+
+        if((productGroups == null || productGroups.isEmpty()) && (productFamilies == null || productFamilies.isEmpty()))  {
+            List<MnIRP__MnProduct__c> products = utils.getProductIdsWithDataVis(LIMIT_PRODUCT_ROWS, productTiers);
+            system.debug('products.size() : '+products.size());
+            if(products != null && !products.isEmpty()) {
+                for (MnIRP__MnProduct__c product : products)  {
+                    productFamilies.add(product.Id);
+                }
+            }
+            products.clear();
+        }
+
+        Integer remainingRows = Limits.getLimitQueryRows() - Limits.getQueryRows();
+        System.debug(LoggingLevel.ERROR,'getLimitQueryRows:'+Limits.getLimitQueryRows());
+        System.debug(LoggingLevel.ERROR,'getQueryRows:'+Limits.getQueryRows());
+        System.debug(LoggingLevel.ERROR,'MAX ROWS:'+remainingRows);
+        remainingRows = Math.min(remainingRows, numRecordsAllowed);
+        
+        // get Revenue Deduction data for export
+        List<NVS_RevenueDeduction__c> revenueDeductions;
+        revenueDeductions = getRDeductions(rgions, cntries, productGroups, productFamilies, remainingRows, productTiers, dt, dt2);
+
+        List<DeductionRecord> dList = new List<DeductionRecord>();
+
+        if(!revenueDeductions.isEmpty()){
+            for(NVS_RevenueDeduction__c rd : revenueDeductions){
+                DeductionRecord deduction = new DeductionRecord();
+                deduction.Id = rd.Id;
+                deduction.country = rd.NVS_Country__c != null ? rd.NVS_Country__r.Name : '';
+                deduction.productFamily = rd.NVS_MnProductSKU__r.MnIRP__MnProduct__c != null ? rd.NVS_MnProductSKU__r.MnIRP__MnProduct__r.Name : '';
+                deduction.productSKU = rd.NVS_MnProductSKU__c != null ? rd.NVS_MnProductSKU__r.Name : '';
+                deduction.strength = rd.NVS_MnProductSKU__r.MnIRP__Strength__c;
+                deduction.form = rd.NVS_MnProductSKU__r.MnIRP__Formulation__c;
+                deduction.packSize = rd.NVS_MnProductSKU__r.MnIRP__PackSize__c;
+                deduction.deductionDate = rd.NVS_DeductionDate__c;
+                deduction.deductionPercentage = rd.NVS_RevenueDeduction__c;
+
+                dList.add(deduction);
+            }
+        }
+        else{
+            dList = new List<DeductionRecord>();
+        }
+
+        return dList;
+
+    }
+
+    public class DeductionRecord {
+        @AuraEnabled
+        public String Id;
+
+        @AuraEnabled
+        public String country;
+
+        @AuraEnabled
+        public String productFamily;
+
+        @AuraEnabled
+        public String productSKU;
+
+        @AuraEnabled
+        public String strength;
+
+        @AuraEnabled
+        public String form;
+
+        @AuraEnabled
+        public Decimal packSize;
+
+        @AuraEnabled
+        public Date deductionDate;
+
+        @AuraEnabled
+        public Decimal deductionPercentage;
+    }
+
+    public static List<NVS_RevenueDeduction__c> getRDeductions(Set<Id> regionIds, Set<Id> countryIds, Set<Id> productGroupIds, Set<Id> productIds, Integer numberOfRows, List<String> tiers, Date dt, Date dt2) {
+        
+        Integer count = 0;
+        String query = 'SELECT Id,Name,NVS_Country__c,NVS_Country__r.Name,' + 
+                        'NVS_MnProductSKU__r.MnIRP__MnProduct__c,' + 
+                        'NVS_MnProductSKU__r.MnIRP__MnProduct__r.Name,' + 
+                        'NVS_MnProductSKU__c,NVS_MnProductSKU__r.Name,' + 
+                        'NVS_MnProductSKU__r.MnIRP__Strength__c,' + 
+                        'NVS_MnProductSKU__r.MnIRP__Formulation__c,' + 
+                        'NVS_MnProductSKU__r.MnIRP__PackSize__c,' + 
+                        'NVS_DeductionDate__c, NVS_RevenueDeduction__c,' + 
+                        'NVS_MnProductSKU__r.MnIRP__MnProduct__r.NVS_Business_Unit__r.Name,' + 
+                        'NVS_MnProductSKU__r.MnIRP__MnProduct__r.NVS_Product_Tier__c ';
+                   
+        
+        query += ' FROM NVS_RevenueDeduction__c WHERE ';
+        
+        List<Id> countries = new List<Id>();
+        if(countryIds != null && countryIds.size() > 0) { // If countries are selected, ignore regions' selection.
+            countries.addAll(countryIds);
+        } else if (regionIds != null && regionIds.size() > 0) {
+            countries.addAll(utils.getCountriesIdForRegionIds(New List<Id>(regionIds)));
+        }
+
+        if (countries.size()>0) {
+            count++;
+            query += ' NVS_Country__c In : countries ';
+        }
+    
+        List<Id> products = new List<Id>();
+        if(productIds != null && productIds.size() > 0) {
+            products.addAll(productIds);
+        } else if(productGroupIds != null && productGroupIds.size() > 0) {
+            products.addAll(new Map<Id, MnIRP__MnProduct__c>(utils.getProductIdsForProductGroupIds(new List<Id>(productGroupIds),2000,tiers)).keySet());
+        }
+            
+        if (products.size()>0) {
+            if(count>0){
+                query += ' AND ';
+            }
+            count++;
+            query += ' NVS_MnProductSKU__r.MnIRP__MnProduct__c IN :products ';
+        }
+
+        if(count>0){
+            query += ' AND ';
+        }
+
+        query += ' NVS_DeductionDate__c >= :dt AND  NVS_DeductionDate__c <= : dt2';
+
+        query += ' ORDER BY NVS_Country__r.Name, NVS_MnProductSKU__r.MnIRP__MnProduct__r.Name, NVS_MnProductSKU__r.Name ' ;
+        
+        query += ' Limit : numberOfRows ';
+
+        List<NVS_RevenueDeduction__c> lstRDeductions = new List<NVS_RevenueDeduction__c>();
+        system.debug('query+++++++++'+query);
+        if(products.size() > 0)
+        lstRDeductions = Database.query(query);
+        system.debug('products.size() : '+products.size());
+        return lstRDeductions;
+    }
+
+    @AuraEnabled
+    public static String processCsvFile(String fileName, String fileBody, String selectedDate) {
+        try {
+            // Parse CSV data and process records
+            List<NVS_RevenueDeduction__c> recordsToUpdateOrInsert = parseAndProcessCsvData(fileBody, selectedDate);
+
+            System.debug('recordsToUpdateOrInsert : Size --> '+recordsToUpdateOrInsert.size());
+                System.debug('recordsToUpdateOrInsert :  --> '+recordsToUpdateOrInsert);
+            // Perform DML operations
+            if (!recordsToUpdateOrInsert.isEmpty()) {
+                
+                upsert recordsToUpdateOrInsert;
+            }
+
+            return 'Success';
+        } catch (Exception ex) {
+            return 'Error: ' + ex.getMessage();
+        }
+    }
+
+    private static List<NVS_RevenueDeduction__c> parseAndProcessCsvData(String csvData, String selectedDate) {
+        List<NVS_RevenueDeduction__c> recordsToUpdateOrInsert = new List<NVS_RevenueDeduction__c>();
+
+        // Split CSV data into rows
+        List<String> csvRows = csvData.split('\n');
+
+        // Extract headers and remove the surrounding quotes
+        List<String> headers = csvRows[0].split(',');
+
+        // Parse the selected date
+        Date startDate = Date.valueOf(selectedDate);
+        
+        // Skip header row if present
+        for (Integer i = 1; i < csvRows.size(); i++) {
+            String[] csvColumns = csvRows[i].split(',');
+            Date currentDate = startDate;
+            Integer k = 0;
+            // Assuming columns are in order: Country, ProductFamily, ProductSKU, Strength, Form, PackSize, Mar-24, ...
+            String countryName = csvColumns[0].trim();
+            //String productFamily = csvColumns[1].trim();
+            String productSKU = csvColumns[2].trim();
+            //String strength = csvColumns[3].trim();
+            //String form = csvColumns[4].trim();
+            //String packSize = csvColumns[5].trim();
+
+            // Iterate through month columns (starting from index 6)
+            for (Integer j = 6; j < headers.size() && j < csvColumns.size(); j++) {
+                String monthYear = headers[j].trim();
+                String deductionPercentageStr = csvColumns[j].trim();
+                
+                currentDate = startDate.addMonths(k);
+                
+
+                // Check if the deductionPercentageStr is not empty and is a valid decimal
+                if (!String.isBlank(deductionPercentageStr)) {
+                    Decimal deductionPercentage = Decimal.valueOf(deductionPercentageStr);
+
+                    // Extract month and year information from column header
+                    String[] monthYearParts = monthYear.split('-');
+                    Integer month = getMonthValue(monthYearParts[0]);
+
+                    // Dynamically calculate the year based on the selected date
+                    Integer calculatedYear = currentDate.year(); //+ Integer.valueOf(monthYearParts[1]);
+
+                    Integer year = calculatedYear;
+                    Integer monthValue = month;
+
+                    // Query existing record based on your criteria
+                        List<NVS_RevenueDeduction__c> existingRecord = [Select Id,Name,NVS_Country__c,NVS_Country__r.Name,NVS_MnProductSKU__r.MnIRP__MnProduct__c,NVS_MnProductSKU__r.MnIRP__MnProduct__r.Name,NVS_MnProductSKU__c,NVS_MnProductSKU__r.Name,NVS_MnProductSKU__r.MnIRP__Strength__c, NVS_MnProductSKU__r.MnIRP__Formulation__c, NVS_MnProductSKU__r.MnIRP__PackSize__c,NVS_DeductionDate__c, NVS_RevenueDeduction__c,  NVS_MnProductSKU__r.MnIRP__MnProduct__r.NVS_Business_Unit__r.Name,NVS_MnProductSKU__r.MnIRP__MnProduct__r.NVS_Product_Tier__c 
+                                                                    FROM NVS_RevenueDeduction__c 
+                                                                    WHERE NVS_Country__r.Name = :countryName AND 
+                                                                    NVS_MnProductSKU__r.Name = :productSKU AND 
+                                                                    CALENDAR_MONTH(NVS_DeductionDate__c) =:month AND 
+                                                                    CALENDAR_YEAR(NVS_DeductionDate__c) =:year LIMIT 1];
+
+                        if (existingRecord.size() > 0) {
+                            // Update existing record
+                            existingRecord[0].NVS_DeductionDate__c = Date.newInstance(year, month, 1);
+                            existingRecord[0].NVS_RevenueDeduction__c = deductionPercentage;
+                            recordsToUpdateOrInsert.add(existingRecord[0]);
+                        } else {
+                            // Create new record
+                            List<MnIRP__MnCountry__c> country = [Select Id,Name from MnIRP__MnCountry__c where name = :countryName Limit 1];
+                            List<MnIRP__MnProductSKU__c> sku = [Select Id,Name from MnIRP__MnProductSKU__c where name = :productSKU Limit 1];
+
+                            if(country.size() > 0 && sku.size() > 0){
+                                NVS_RevenueDeduction__c newRecord = new NVS_RevenueDeduction__c(
+                                    NVS_Country__c = country[0].Id,
+                                    NVS_MnProductSKU__c = sku[0].Id, 
+                                    NVS_DeductionDate__c = Date.newInstance(year, month, 1),
+                                    NVS_RevenueDeduction__c = deductionPercentage
+                                );
+                                recordsToUpdateOrInsert.add(newRecord);
+                            }
+                        }
+                    //}
+                }
+               k+=1; 
+            }
+        }
+        
+
+        return recordsToUpdateOrInsert;
+    }
+
+    @AuraEnabled
+    public static Integer getMonthValue(String strMonth){
+
+        Map<String, Integer> monthMap = new Map<String, Integer> {
+            'Jan' => 1,
+            'Feb' => 2,
+            'Mar' => 3,
+            'Apr' => 4,
+            'May' => 5,
+            'Jun' => 6,
+            'Jul' => 7,
+            'Aug' => 8,
+            'Sep' => 9,
+            'Oct' => 10,
+            'Nov' => 11,
+            'Dec' => 12
+        };
+
+        return monthMap.get(strMonth);
+    }
+}

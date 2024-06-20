@@ -1,0 +1,227 @@
+@isTest
+public class NVS_RevenueDeductionControllerTest {
+    
+    @isTest
+	static void TestNVS_Method_RDeduction() {
+        // TO DO: implement unit test
+        
+        List<String> priceTList = new List<String>();
+        priceTList.add('Official Reference Price');
+        priceTList.add('Target List Price');
+        priceTList.add('Ex-F Hospital Price / Pack');
+        priceTList.add('NPhS Ex-Factory Price');
+        priceTList.add('Target Net');
+        priceTList.add('Expected Average Net Selling Price');
+        priceTList.add('Walkaway');
+        priceTList.add('High Net Selling Price');
+        priceTList.add('List Floor Price');
+        priceTList.add('List Price');
+        priceTList.add('Low Net Selling Price');
+        priceTList.add('Net Floor');
+        priceTList.add('Pharmacy Purchase Price/Pack');
+        priceTList.add('Public Price/Pack (Exc. VAT)');
+        priceTList.add('Public Price/Pack (Inc. VAT)');
+        priceTList.add('Target Price');
+        priceTList.add('Visible Net Price');
+        priceTList.add('Ex-F Price / Pack');    
+         
+        
+        List<MnIRP__MnRegion__c> regionList = new List<MnIRP__MnRegion__c>();
+        MnIRP__MnRegion__c region = new MnIRP__MnRegion__c();
+        region.name='AL_USA';
+        regionList.add(region);
+        
+        MnIRP__MnRegion__c subregion = new MnIRP__MnRegion__c();
+        subregion.name='AL_US';
+        regionList.add(subregion);
+        
+        insert regionList;
+        
+        List<MnIRP__MnCountry__c> countryList = new List<MnIRP__MnCountry__c>();
+        MnIRP__MnCountry__c testCountry = NVS_TestData.CreateTestCountry('United States', 'US', 'US', 'Daily Exchange Rate', 'ON_USA;GEN_USA', 4, null, System.today(), 'Verified');
+        testcountry.MnIRP__MnRegion__c=region.id;
+        testcountry.MnIRP__RegionSubRegion__c =region.name;
+        
+        testcountry.MnIRP__Managed__c=True;
+        countryList.add(testCountry);            
+        insert countryList;
+        
+        MnIRP__MnProductGroup__c testPG = NVS_TestData.CreateTestProductGroup('SandozBiopharma', 'PG001', 'Test_Oncology Medicines');
+        insert testPG;
+        
+        List<MnIRP__MnProduct__c> prodList = new List<MnIRP__MnProduct__c>();
+        MnIRP__MnProduct__c testProduct = NVS_TestData.CreateTestProductFamily('JAKAVI', 'JAKAVI', 'Test_JAKAVI1', testPG.id, 'Uncategorized');
+        testProduct.MnIRP__DataVisibilityName__c = 'PF0000';
+        testProduct.MnIRP__ProductGroupSubGroup__c = 'CNG';
+        prodList.add( testProduct);
+        insert prodList;
+        
+        
+        List<MnIRP__MnRegionCountryMap__c> regionCountryList = new List<MnIRP__MnRegionCountryMap__c>();
+        MnIRP__MnRegionCountryMap__c mrcm = new MnIRP__MnRegionCountryMap__c();
+        mrcm.MnIRP__ChildRegion__c=subregion.id;
+        mrcm.MnIRP__ParentRegion__c=region.id;
+        mrcm.name=region.Name+'/'+subregion.name;
+        mrcm.MnIRP__UniqueID__c=region.Name+'_'+subregion.name+'_null';
+        regionCountryList.add(mrcm);
+        
+        MnIRP__MnRegionCountryMap__c mrcm1 = new MnIRP__MnRegionCountryMap__c();
+        mrcm1.MnIRP__ParentRegion__c=region.id;
+        mrcm1.MnIRP__ChildCountry__c=testCountry.Id;
+        mrcm1.name=region.Name+'/'+testCountry.MnIRP__ISOCode__c;
+        mrcm1.MnIRP__UniqueID__c=region.Name+'_null_'+testCountry.MnIRP__ISOCode__c;
+        regionCountryList.add(mrcm1);
+        insert regionCountryList;
+        
+        MnIRP__MnProductSKU__c psku = new MnIRP__MnProductSKU__c();
+        psku.MnIRP__MnProduct__c=testProduct.id;
+        psku.MnIRP__QODS__c= 'MG';
+        psku.name='Test Product SKU';
+        psku.MnIRP__Inns__c='TESTINN';
+        psku.MnIRP__Strength__c = '1000/50MG/PC';
+        psku.MnIRP__Formulation__c = 'liquid in vial';
+        psku.MnIRP__PackSize__c = 180;
+        
+        List<MnIRP__MnProductSKU__c> lstPSKU = new List<MnIRP__MnProductSKU__c>();
+        lstPSKU.add(psku);
+        insert lstPSKU;
+        
+        List<MnIRP__MnPriceType__c> pricetypeList = new List<MnIRP__MnPriceType__c>();
+        
+        for(String pricetype : priceTList){
+            MnIRP__MnPriceType__c testPriceType = NVS_TestData.CreateTestPriceType(pricetype,true,pricetype);
+            
+            testPriceType.NVS_GENMED_FLAG__c = true;
+            testPriceType.NVS_ONCOLOGY_FLAG__c  = true;
+            pricetypeList.add(testPriceType);
+        }
+        
+        
+        insert pricetypeList;
+        
+        List<MnIRP__MnCountryPriceType__c> countryPriceList = new List<MnIRP__MnCountryPriceType__c>();
+        List<Id> pricetypeIds = new List<Id>();
+        
+        for(MnIRP__MnPriceType__c pt :pricetypeList){
+            MnIRP__MnCountryPriceType__c testCountryPriceType =  NVS_TestData.CreateTestCountryChannelPriceType(testcountry.Id,null,'',pt.Id,pt.Name,true,true,'Test Country Price Type');
+            countryPriceList.add(testCountryPriceType);
+            pricetypeIds.add(pt.Id);
+            
+        }
+        
+        insert countryPriceList;
+        
+        List<MnIRP__MnCountryProductPriceType__c> countryprodPriceList = new List<MnIRP__MnCountryProductPriceType__c>();
+        //List<Id> pricetypeIds = new List<Id>();
+        
+        for(MnIRP__MnPriceType__c pt :pricetypeList){
+            MnIRP__MnCountryProductPriceType__c testCountryprodPriceType =  new MnIRP__MnCountryProductPriceType__c(MnIRP__MnCountry__c = testcountry.Id,MnIRP__MnPriceType__c = pt.id, MnIRP__MnProduct__c = testProduct.Id, MnIRP__Published__c = true);
+            countryprodPriceList.add(testCountryprodPriceType);
+            //pricetypeIds.add(pt.Id);
+            
+        }
+        
+        insert countryprodPriceList;     
+        
+        List<MnIRP__MnCountryProductSKU__c> countryProdSkuList = new List<MnIRP__MnCountryProductSKU__c>();
+        MnIRP__MnCountryProductSKU__c testCountryProdSku =  NVS_TestData.CreateTestCountryProductSKU(testcountry.id,psku.Id,null,null,null,date.today(),false,'Actively Marketed');
+        countryProdSkuList.add( testCountryProdSku);
+        
+        insert new MnIRP__MnCustomSetting__c(MnIRP__value__c = 'Value', name = 'abc');
+        insert new MnIRP__MnCustomSetting__c(MnIRP__value__c = 'Valueq', name = 'ksdo');
+        
+        insert countryProdSkuList;
+        
+        set<id> cset = new set<id>();
+        list<id> clist = new list<id>();
+        list<String> cDVlist = new list<String>();
+        cset.add(countryList[0].id);
+        clist.add(countryList[0].Id);
+        cDVlist.add(countryList[0].MnIRP__ISOCode__c);
+        list<id> plist = new list<id>();
+        list<String> pDVlist = new list<String>();
+        set<id> pset = new set<id>();
+        pset.add(prodList[0].id);
+        plist.add(prodList[0].id);
+        MnIRP__MnProductGroupProductMap__c pgpf = new MnIRP__MnProductGroupProductMap__c();
+        pgpf.MnIRP__ParentProductGroup__c = testPG.id;
+        pgpf.MnIRP__ChildProduct__c = prodList[0].id;
+        insert pgpf;
+        pDVlist.add(prodList[0].MnIRP__DataVisibilityName__c);
+        Test.startTest();
+        
+        set<id> pgset = new set<id>();
+        list<id> pglist = new list<id>();
+        pgset.add(testPG.id);
+        pglist.add(testPG.id);
+        string ptname = 'hospital-exfprice';
+        set<string> ptSet = new set<string>();
+        ptSet.add(ptname);
+        
+        USER adminUser = [SELECT Id, Name FROM User WHERE Id=:UserInfo.getUserId()];
+        mnirp__MnUserConfig__c user1Config;
+        user1Config = new mnirp__MnUserConfig__c(
+            mnirp__User__c = userinfo.getUserid(),
+            mnirp__ProductAccess__c = 'READ',//MnUserConfigService.ACCESS_ALL_PRODUCTS,
+            mnirp__RegionAccess__c = 'READ',//MnUserConfigService.ACCESS_READ,
+            mnirp__PriceAccess__c = 'READ'//MnUserConfigService.ALL_PRICE_ACCESS_YES
+        );
+        insert user1Config;
+        
+        mnirp__MnRegion__c region1 = new mnirp__MnRegion__c();
+        region1.Name = 'TestSubRegion';
+        Insert region1;
+        
+        mnirp__MnDataVisibilityConfig__c objDV = new mnirp__MnDataVisibilityConfig__c();
+        objDV.mnirp__Region__c = region1.Id;
+        objDV.mnirp__UserConfig__c = user1Config.Id;
+        Insert objDV;
+        
+        NVS_RevenueDeduction__c revenueDeduction = new NVS_RevenueDeduction__c();
+        revenueDeduction.NVS_Country__c = countryList[0].Id;
+        revenueDeduction.NVS_MnProductSKU__c = lstPSKU[0].Id;
+        revenueDeduction.NVS_DeductionDate__c = Date.today().addDays(20);
+        revenueDeduction.NVS_RevenueDeduction__c = 12.056;
+        
+        Insert revenueDeduction;
+        
+        NVS_RevenueDeduction__c rd = [Select Id,NVS_Country__c,NVS_Country__r.Name,NVS_Country__r.NVS_Region__r.NaME, NVS_Country__r.MnIRP__MnRegion__r.Name,NVS_Country__r.MnIRP__RegionSubRegion__c, NVS_MnProductSKU__r.MnIRP__MnProduct__c,NVS_MnProductSKU__r.MnIRP__MnProduct__r.Name,NVS_MnProductSKU__c,NVS_MnProductSKU__r.Name,NVS_MnProductSKU__r.MnIRP__Strength__c, NVS_MnProductSKU__r.MnIRP__Formulation__c, NVS_MnProductSKU__r.MnIRP__PackSize__c,NVS_DeductionDate__c, NVS_RevenueDeduction__c,  NVS_MnProductSKU__r.MnIRP__MnProduct__r.NVS_Business_Unit__r.Name,NVS_MnProductSKU__r.MnIRP__MnProduct__r.NVS_Product_Tier__c 
+                                                                    FROM NVS_RevenueDeduction__c  Limit 1];
+        System.debug('NVS_RevenueDeduction__c : '+rd);
+        
+        String fileName = 'TestFile.csv';
+        String fileBody = 'Country,ProductFamily,ProductSKU,Strength,Form,PackSize,Mar-24\n' +
+                              'United States,Family1,Test Product SKU,100MG,Liquid,10,0.05';
+                            
+        String selectedDate = '2024-03-01'; 
+        List<String> tiers = new List<String>{'Tier-1','Tier-2'};
+        
+        System.runAs(adminUser) {
+            
+            String dt = '2024-03-14';
+            list<id> rlist = new list<id>();
+            list<String> rDVlist = new list<String>();
+            set<id> rset = new set<id>();
+            rlist.add(regionList[0].id);
+            rlist.add(regionList[1].id);
+            rDVlist.add(regionList[0].MnIRP__DataVisibilityName__c);
+            rset.add(regionList[0].id);
+            rset.add(regionList[1].id);
+            rDVlist.add(regionList[1].MnIRP__DataVisibilityName__c);
+            
+            
+            NVS_RevenueDeductionController.loadData();
+            NVS_RevenueDeductionController.loadCountryPricetype(cDVlist, pglist, pDVlist,new list<String>());
+            NVS_RevenueDeductionController.getProductsfromTiers(tiers);
+            NVS_RevenueDeductionController.loadProdRegion(pglist, tiers);
+            NVS_RevenueDeductionController.getCountries(rDVlist, pDVlist,tiers);
+            NVS_RevenueDeductionTableController.getDeductionRecords(pglist,new list<String>(), pDVlist,cDVlist,rDVlist,dt);
+            String result = NVS_RevenueDeductionTableController.processCsvFile(fileName, fileBody, selectedDate);
+            
+            System.debug('result : '+result);
+            
+            Test.stopTest();
+        }
+    }
+    
+}
